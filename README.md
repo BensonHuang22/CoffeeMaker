@@ -1,4 +1,5 @@
 # CoffeeMaker
+Class Project for CSC326 Software Engineer. Created in a team of 4.
 
 ## Resources
 
