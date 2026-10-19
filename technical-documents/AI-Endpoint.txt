@@ -1,0 +1,386 @@
+5. REST API
+
+I would use the following API.
+
+Use	Verb	URL
+List recipes	GET	/api/recipes
+Get recipe for edit	GET	/api/recipes/{id}
+Add recipe	POST	/api/recipes
+Edit recipe	PUT	/api/recipes/{id}
+List available ingredients	GET	/api/ingredients
+
+The ingredient endpoint allows the frontend's Add Ingredient control to populate something like:
+
+Choose ingredient:
+
+Coffee
+Milk
+Sugar
+Chocolate
+
+Here, "Add Ingredient" means adding an ingredient that is not already part of the current recipe. If your requirements also allow creating entirely new ingredient types, I would additionally add POST /api/ingredients.
+
+6. GET /api/recipes
+
+Used by UC4 to show the recipes that may be edited.
+
+Request
+GET /api/recipes
+
+No body.
+
+Successful response
+200 OK
+[
+  {
+    "id": 1,
+    "name": "Coffee",
+    "price": 50,
+    "version": 0,
+    "ingredients": [
+      {
+        "ingredientId": 1,
+        "ingredientName": "Coffee",
+        "units": 3
+      },
+      {
+        "ingredientId": 3,
+        "ingredientName": "Sugar",
+        "units": 1
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Mocha",
+    "price": 75,
+    "version": 1,
+    "ingredients": [
+      {
+        "ingredientId": 1,
+        "ingredientName": "Coffee",
+        "units": 3
+      },
+      {
+        "ingredientId": 4,
+        "ingredientName": "Chocolate",
+        "units": 2
+      }
+    ]
+  }
+]
+
+An empty system returns:
+
+200 OK
+[]
+7. GET /api/recipes/{id}
+
+This endpoint is important for UC4.
+
+The user selects a recipe, and then the frontend gets its current information to pre-fill the form.
+
+Request
+GET /api/recipes/7
+Success
+200 OK
+{
+  "id": 7,
+  "name": "Latte",
+  "price": 60,
+  "version": 2,
+  "ingredients": [
+    {
+      "ingredientId": 1,
+      "ingredientName": "Coffee",
+      "units": 3
+    },
+    {
+      "ingredientId": 2,
+      "ingredientName": "Milk",
+      "units": 4
+    }
+  ]
+}
+Recipe deleted by another user
+
+This implements:
+
+[Cannot Edit] If the recipe is deleted by a concurrent user before it's selected for edit
+
+404 Not Found
+{
+  "error": "RECIPE_NOT_FOUND",
+  "message": "Recipe 7 no longer exists."
+}
+
+The frontend then performs another:
+
+GET /api/recipes
+
+to refresh the list.
+
+8. POST /api/recipes
+
+Implements UC2 Add Recipe.
+
+Request
+POST /api/recipes
+Content-Type: application/json
+{
+  "name": "Latte",
+  "price": 60,
+  "ingredients": [
+    {
+      "ingredientId": 1,
+      "units": 3
+    },
+    {
+      "ingredientId": 2,
+      "units": 4
+    }
+  ]
+}
+
+Notice that the frontend sends ingredientId, rather than copying the entire Ingredient entity.
+
+Successful response
+201 Created
+{
+  "id": 7,
+  "name": "Latte",
+  "price": 60,
+  "version": 0,
+  "ingredients": [
+    {
+      "ingredientId": 1,
+      "ingredientName": "Coffee",
+      "units": 3
+    },
+    {
+      "ingredientId": 2,
+      "ingredientName": "Milk",
+      "units": 4
+    }
+  ]
+}
+Invalid price
+400 Bad Request
+{
+  "error": "INVALID_PRICE",
+  "message": "Recipe price must be a positive integer."
+}
+Invalid ingredient unit
+400 Bad Request
+{
+  "error": "INVALID_UNIT",
+  "message": "Ingredient units must be positive integers."
+}
+No ingredients
+400 Bad Request
+{
+  "error": "NO_INGREDIENTS",
+  "message": "A recipe must contain at least one ingredient."
+}
+Duplicate recipe
+409 Conflict
+{
+  "error": "DUPLICATE_RECIPE",
+  "message": "A recipe named Latte already exists."
+}
+Already three recipes
+
+If you are following the convention used by your existing CoffeeMaker backend, this can remain:
+
+507 Insufficient Storage
+{
+  "error": "TOO_MANY_RECIPES",
+  "message": "The system may contain at most three recipes."
+}
+
+409 Conflict would also be defensible REST design, but if your existing assignment/controller expects 507, I would keep 507 so the tests and design stay consistent.
+
+9. PUT /api/recipes/{id}
+
+Implements UC4 Edit Recipe.
+
+Suppose Latte originally contains:
+
+Coffee: 3
+Milk:   4
+
+The user:
+
+changes Coffee from 3 → 4
+removes Milk
+adds Sugar with 2
+
+The client can simply send the complete new ingredient list.
+
+Request
+PUT /api/recipes/7
+Content-Type: application/json
+{
+  "price": 65,
+  "version": 2,
+  "ingredients": [
+    {
+      "ingredientId": 1,
+      "units": 4
+    },
+    {
+      "ingredientId": 3,
+      "units": 2
+    }
+  ]
+}
+
+This is much cleaner than having REST endpoints like:
+
+/addIngredient
+/removeIngredient
+/editUnits
+
+Those are use-case subflows, not necessarily separate backend operations. They happen in the UI while the user edits the form. When they click Save, the frontend sends the final state of the recipe.
+
+Success
+200 OK
+{
+  "id": 7,
+  "name": "Latte",
+  "price": 65,
+  "version": 3,
+  "ingredients": [
+    {
+      "ingredientId": 1,
+      "ingredientName": "Coffee",
+      "units": 4
+    },
+    {
+      "ingredientId": 3,
+      "ingredientName": "Sugar",
+      "units": 2
+    }
+  ]
+}
+Recipe deleted while being edited
+404 Not Found
+{
+  "error": "RECIPE_NOT_FOUND",
+  "message": "The recipe no longer exists."
+}
+Invalid price
+400 Bad Request
+{
+  "error": "INVALID_PRICE",
+  "message": "Recipe price must be a positive integer."
+}
+Invalid units
+400 Bad Request
+{
+  "error": "INVALID_UNIT",
+  "message": "Ingredient units must be positive integers."
+}
+No ingredients
+400 Bad Request
+{
+  "error": "NO_INGREDIENTS",
+  "message": "A recipe must contain at least one ingredient."
+}
+10. GET /api/ingredients
+
+Used for the Add Ingredient subflow.
+
+Request
+GET /api/ingredients
+Response
+200 OK
+[
+  {
+    "id": 1,
+    "name": "Coffee"
+  },
+  {
+    "id": 2,
+    "name": "Milk"
+  },
+  {
+    "id": 3,
+    "name": "Sugar"
+  },
+  {
+    "id": 4,
+    "name": "Chocolate"
+  }
+]
+
+The frontend can filter out ingredients already in the recipe.
+
+11. Exception handling
+
+I would also add a single global REST exception handler rather than putting error-response construction inside every controller method:
+
+@RestControllerAdvice
+GlobalExceptionHandler
+
+    DuplicateRecipeException
+        -> 409
+
+    TooManyRecipesException
+        -> 507
+
+    InvalidPriceException
+        -> 400
+
+    InvalidUnitException
+        -> 400
+
+    NoIngredientsException
+        -> 400
+
+    RecipeNotFoundException
+        -> 404
+
+    IngredientNotFoundException
+        -> 404
+
+That keeps the architecture clean:
+
+HTTP Request
+     |
+     v
+RecipeController
+     |
+     v
+RecipeService
+     |
+     v
+RecipeServiceImpl
+     |
+     +----> RecipeRepository
+     |
+     +----> IngredientRepository
+     |
+     v
+JPA Entities
+     |
+     v
+Database
+
+The controller handles HTTP, the service handles the use-case/business rules, the repositories handle persistence, and the mapper prevents JPA entities from leaking into the REST API.
+
+The most important design decision for your project is therefore this relationship:
+
+Recipe
+   |
+   | 1
+   |
+   | *
+RecipeIngredient
+   |
+   | *
+   |
+   | 1
+Ingredient
+
+with units on RecipeIngredient. That structure directly supports Add Ingredient, Remove Ingredient, Edit Units, No Ingredients, Add Recipe, and Edit Recipe without needing to redesign Recipe every time a new ingredient type is introduced.

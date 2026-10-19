@@ -1,0 +1,7 @@
+/.idea/
+/.claude/
+
+# Jekyll build output and installed gems, if you build the site locally
+/_site/
+/.jekyll-cache/
+/vendor/

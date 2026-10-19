@@ -1,0 +1,92 @@
+name: Deploy Documentation to GitHub Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job - renders every Markdown file in the repository to HTML
+  build:
+    name: Build the site
+    runs-on: [ campus ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Builds Jekyll with Ruby rather than the actions/jekyll-build-pages
+      # container action: container actions do not reliably see the workspace
+      # on self-hosted runners, which leaves _site missing after a "successful"
+      # build.  These steps run directly on the runner instead.
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      # Reads the Pages configuration for this repository (base_path, below).
+      # Pages must already be enabled on the repository with its source set to
+      # "GitHub Actions": Settings > Pages > Build and deployment > Source.
+      # This step cannot turn Pages on itself - the API call that creates a
+      # Pages site needs repository-admin rights, which the workflow's
+      # GITHUB_TOKEN does not have, so `enablement: true` fails with
+      # "Resource not accessible by integration".
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      # base_path is the path the site is served under, read from the Pages
+      # API by the step above.  It is empty for a site served at the root of
+      # its own subdomain - which is what our enterprise hands out - and
+      # "/<repository-name>" for a site served under github.io.  Take it from
+      # the API rather than hardcoding it, since the two forms need different
+      # values and the subdomain is assigned per repository.
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+        env:
+          JEKYLL_ENV: production
+          # The theme's layout reads site.github.*, which the
+          # jekyll-github-metadata plugin fills in.  Left to itself the plugin
+          # works the repository name out by running `git remote get-url
+          # origin`, and that comes back empty on a self-hosted runner - the
+          # build then fails with "No repo name found".  Naming the repository
+          # here skips the git lookup entirely.  github.repository is resolved
+          # per run, so forks and team repositories get their own value.
+          PAGES_REPO_NWO: ${{ github.repository }}
+          # Lets the same plugin read repository metadata from the API instead
+          # of guessing at it.
+          JEKYLL_GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+
+  # Deployment job - publishes the artifact the build job produced
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: [ campus ]
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

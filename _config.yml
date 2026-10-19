@@ -1,0 +1,19 @@
+# Jekyll configuration for the GitHub Pages documentation site.
+# Built and published by .github/workflows/jekyll-gh-pages.yml.
+
+title: CoffeeMaker
+description: Technical documentation for the CSC 326 CoffeeMaker onboarding project.
+
+# Any theme GitHub Pages supports works here; change this line to change the
+# look of the whole site.  https://pages.github.com/themes/
+theme: jekyll-theme-cayman
+
+# Directories that hold build output or installed dependencies.  None of these
+# are committed, so this only matters when you build the site locally.
+exclude:
+  - coffee_maker/target/
+  - coffee_maker_frontend/node_modules/
+  - coffee_maker_frontend/dist/
+  - Gemfile
+  - Gemfile.lock
+  - vendor/

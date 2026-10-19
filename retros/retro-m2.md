@@ -1,0 +1,3 @@
+# AI Retrospective - Milestone 2
+
+During this assignment AI was an interesting tool to give fresh ideas and different perspectives I hadn't considered. Majority of the time we as a team went with our original concept, but AI was able to show us an alterantive path, and we sometimes took some ideas from the idea to make our ideas better. For the individual portion, AI was able to strengthen my ideas by giving me a more varied design that covers more situations to make implementation easier in the future. For example, in the AI endpoints portion, the AI created more than the necessary number of endpoints, but I think they would be usefull later for testing or for additional functionality later. AI is definingly something I would using more often as a tool.
